@@ -45,7 +45,8 @@ export default function ClientDetail() {
   const [gstFetching, setGstFetching] = useState(false);
   const [gstFetchError, setGstFetchError] = useState("");
 
-  const [activeScraperPlaceholder, setActiveScraperPlaceholder] = useState(null);
+  const [activeScraperPlaceholder, setActiveScraperPlaceholder] =
+    useState(null);
 
   const servicesWithCredentials = [
     {
@@ -148,7 +149,7 @@ export default function ClientDetail() {
       label: "Aadhaar",
       numberLabel: "Aadhaar No",
       numberField: "aadhaar_number",
-    }
+    },
   ];
 
   const hasCredentials = (service) => {
@@ -183,7 +184,11 @@ export default function ClientDetail() {
     setGstFetching(true);
     try {
       const { verifyGstCaptcha } = await import("../../api");
-      const result = await verifyGstCaptcha(gstSessionId, gstCaptchaText);
+      const result = await verifyGstCaptcha(
+        gstSessionId,
+        gstCaptchaText,
+        client.id,
+      );
       if (result.success && result.data) {
         const d = result.data;
         const updatedFields = {
@@ -210,7 +215,9 @@ export default function ClientDetail() {
         setGstFetchError("Wrong CAPTCHA — please try again");
       }
     } catch (err) {
-      setGstFetchError("Wrong CAPTCHA or Verification Error — please try again");
+      setGstFetchError(
+        "Wrong CAPTCHA or Verification Error — please try again",
+      );
     } finally {
       setGstFetching(false);
     }
@@ -227,10 +234,15 @@ export default function ClientDetail() {
       const res = await fetchServiceDetails(id, service.key);
       if (res.success) {
         qc.invalidateQueries({ queryKey: ["client", id] });
-        alert(res.message || `✓ Details successfully fetched for ${service.label}!`);
+        alert(
+          res.message || `✓ Details successfully fetched for ${service.label}!`,
+        );
       }
     } catch (err) {
-      alert(err.response?.data?.detail || `Failed to fetch details for ${service.label}.`);
+      alert(
+        err.response?.data?.detail ||
+          `Failed to fetch details for ${service.label}.`,
+      );
     } finally {
       setGstFetching(false);
     }
@@ -248,7 +260,11 @@ export default function ClientDetail() {
   const [feesLoading, setFeesLoading] = useState(false);
   const [feesSaved, setFeesSaved] = useState(false);
 
-  const canEditService = isAdmin || (isEmployee && (client?.assigned_employee?.id === user?.id || client?.assigned_employee_id === user?.id));
+  const canEditService =
+    isAdmin ||
+    (isEmployee &&
+      (client?.assigned_employee?.id === user?.id ||
+        client?.assigned_employee_id === user?.id));
 
   useEffect(() => {
     if (client && client.fees !== undefined) {
@@ -347,9 +363,14 @@ export default function ClientDetail() {
     (s) => !assignedServiceIds.includes(s.id),
   );
 
-  const completedServicesCount = client.services.filter(s => s.status === 'completed' || s.status === 'done').length;
+  const completedServicesCount = client.services.filter(
+    (s) => s.status === "completed" || s.status === "done",
+  ).length;
   const totalServicesCount = client.services.length;
-  const overallProgress = totalServicesCount > 0 ? Math.round((completedServicesCount / totalServicesCount) * 100) : 0;
+  const overallProgress =
+    totalServicesCount > 0
+      ? Math.round((completedServicesCount / totalServicesCount) * 100)
+      : 0;
 
   return (
     <Layout title={client.business_name}>
@@ -381,7 +402,9 @@ export default function ClientDetail() {
             <button
               key={service.key}
               onClick={() => {
-                setSelectedService(selectedService === service.key ? null : service.key);
+                setSelectedService(
+                  selectedService === service.key ? null : service.key,
+                );
               }}
               className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition-all flex items-center gap-1.5 select-none ${
                 selectedService === service.key
@@ -400,79 +423,116 @@ export default function ClientDetail() {
         </div>
 
         {/* Credentials Info Panel */}
-        {selectedService && (() => {
-          const service = servicesWithCredentials.find((s) => s.key === selectedService);
-          if (!service) return null;
+        {selectedService &&
+          (() => {
+            const service = servicesWithCredentials.find(
+              (s) => s.key === selectedService,
+            );
+            if (!service) return null;
 
-          const numVal = service.numberField ? client[service.numberField] : null;
-          const idVal = service.idField ? client[service.idField] : null;
-          const pwdVal = service.pwdField ? client[service.pwdField] : null;
+            const numVal = service.numberField
+              ? client[service.numberField]
+              : null;
+            const idVal = service.idField ? client[service.idField] : null;
+            const pwdVal = service.pwdField ? client[service.pwdField] : null;
 
-          return (
-            <div className="bg-gradient-to-r from-blue-50/50 to-indigo-50/50 border border-blue-100 rounded-2xl p-5 mb-5 shadow-sm transition-all duration-300 animate-fadeIn">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <span className="p-1.5 bg-blue-100 text-blue-700 rounded-lg">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
-                    </svg>
-                  </span>
-                  <h3 className="text-sm font-semibold text-gray-900">{service.label} Credentials</h3>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => handleFetchService(service)}
-                    className="px-3 py-1.5 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-1.5 shadow-sm font-semibold transition-colors"
-                  >
-                    {gstFetching && service.key === "gst" ? (
-                      <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    ) : (
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 8H17" />
+            return (
+              <div className="bg-gradient-to-r from-blue-50/50 to-indigo-50/50 border border-blue-100 rounded-2xl p-5 mb-5 shadow-sm transition-all duration-300 animate-fadeIn">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <span className="p-1.5 bg-blue-100 text-blue-700 rounded-lg">
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                        />
                       </svg>
-                    )}
-                    <span>Fetch Details</span>
-                  </button>
-                  <button
-                    onClick={() => setSelectedService(null)}
-                    className="text-gray-400 hover:text-gray-600 p-1 hover:bg-white rounded-full transition-colors"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/>
-                    </svg>
-                  </button>
+                    </span>
+                    <h3 className="text-sm font-semibold text-gray-900">
+                      {service.label} Credentials
+                    </h3>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleFetchService(service)}
+                      className="px-3 py-1.5 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-1.5 shadow-sm font-semibold transition-colors"
+                    >
+                      {gstFetching && service.key === "gst" ? (
+                        <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      ) : (
+                        <svg
+                          className="w-3.5 h-3.5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 8H17"
+                          />
+                        </svg>
+                      )}
+                      <span>Fetch Details</span>
+                    </button>
+                    <button
+                      onClick={() => setSelectedService(null)}
+                      className="text-gray-400 hover:text-gray-600 p-1 hover:bg-white rounded-full transition-colors"
+                    >
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M6 18L18 6M6 6l12 12"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {service.numberField && (
+                    <CredentialField
+                      label={service.numberLabel || "Number"}
+                      value={numVal}
+                      placeholder="Not set"
+                    />
+                  )}
+
+                  {service.idField && (
+                    <CredentialField
+                      label="Login ID / Username"
+                      value={idVal}
+                      placeholder="Not set"
+                    />
+                  )}
+
+                  {service.pwdField && (
+                    <CredentialField
+                      label="Password"
+                      value={pwdVal}
+                      placeholder="Not set"
+                      isPassword
+                    />
+                  )}
                 </div>
               </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {service.numberField && (
-                  <CredentialField
-                    label={service.numberLabel || "Number"}
-                    value={numVal}
-                    placeholder="Not set"
-                  />
-                )}
-
-                {service.idField && (
-                  <CredentialField
-                    label="Login ID / Username"
-                    value={idVal}
-                    placeholder="Not set"
-                  />
-                )}
-
-                {service.pwdField && (
-                  <CredentialField
-                    label="Password"
-                    value={pwdVal}
-                    placeholder="Not set"
-                    isPassword
-                  />
-                )}
-              </div>
-            </div>
-          );
-        })()}
+            );
+          })()}
 
         <div className="flex items-start justify-between">
           <div>
@@ -563,11 +623,21 @@ export default function ClientDetail() {
                 <tbody className="divide-y divide-gray-100">
                   {client.directors.map((d, i) => (
                     <tr key={i} className="hover:bg-gray-50">
-                      <td className="px-4 py-2 text-gray-900 font-medium">{d.name}</td>
-                      <td className="px-4 py-2 text-gray-600 font-mono text-xs">{d.pan || "—"}</td>
-                      <td className="px-4 py-2 text-gray-600 font-mono text-xs">{d.din || "—"}</td>
-                      <td className="px-4 py-2 text-gray-600">{d.email || "—"}</td>
-                      <td className="px-4 py-2 text-gray-600">{d.mobile || "—"}</td>
+                      <td className="px-4 py-2 text-gray-900 font-medium">
+                        {d.name}
+                      </td>
+                      <td className="px-4 py-2 text-gray-600 font-mono text-xs">
+                        {d.pan || "—"}
+                      </td>
+                      <td className="px-4 py-2 text-gray-600 font-mono text-xs">
+                        {d.din || "—"}
+                      </td>
+                      <td className="px-4 py-2 text-gray-600">
+                        {d.email || "—"}
+                      </td>
+                      <td className="px-4 py-2 text-gray-600">
+                        {d.mobile || "—"}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -579,7 +649,9 @@ export default function ClientDetail() {
       {/* Fees field - inline on a single line with matching left padding */}
       {isAdmin && (
         <div className="mt-4 pt-4 border-t border-gray-200 flex items-center gap-3 animate-fadeIn pl-4">
-          <span className="text-gray-500 text-xs font-semibold uppercase tracking-wider select-none">Fees:</span>
+          <span className="text-gray-500 text-xs font-semibold uppercase tracking-wider select-none">
+            Fees:
+          </span>
           <div className="flex items-center gap-2">
             <input
               type="number"
@@ -606,7 +678,10 @@ export default function ClientDetail() {
         <div className="flex gap-1 -mb-px flex-shrink-0">
           {[
             { key: "overview", label: `Services (${overallProgress}%)` },
-            { key: "documents", label: `Documents (${client.documents.length})` },
+            {
+              key: "documents",
+              label: `Documents (${client.documents.length})`,
+            },
             { key: "tasks", label: `Tasks (${client.tasks.length})` },
           ].map((tab) => (
             <button
@@ -708,8 +783,18 @@ export default function ClientDetail() {
               }}
               className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
             </button>
 
@@ -723,7 +808,9 @@ export default function ClientDetail() {
                 </h3>
               </div>
               <p className="text-xs text-gray-500">
-                Enter the CAPTCHA code shown below to pull active registration details for <strong>{client.business_name}</strong> (GSTIN: {client.gstin}).
+                Enter the CAPTCHA code shown below to pull active registration
+                details for <strong>{client.business_name}</strong> (GSTIN:{" "}
+                {client.gstin}).
               </p>
 
               {gstFetchError && (
@@ -770,8 +857,18 @@ export default function ClientDetail() {
               onClick={() => setActiveScraperPlaceholder(null)}
               className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
             </button>
 
@@ -783,7 +880,9 @@ export default function ClientDetail() {
                 {activeScraperPlaceholder.label} Scraper Integration
               </h3>
               <p className="text-xs text-gray-500 leading-relaxed">
-                The automatic fetch utility for <strong>{activeScraperPlaceholder.label}</strong> is currently in development.
+                The automatic fetch utility for{" "}
+                <strong>{activeScraperPlaceholder.label}</strong> is currently
+                in development.
               </p>
               <div className="bg-gray-50 border border-gray-100 rounded-xl p-3.5 text-left text-xs text-gray-600 space-y-2">
                 <p className="font-semibold text-gray-800 flex items-center gap-1.5">
@@ -929,9 +1028,14 @@ function OverviewTab({
   onUpdateProgress,
   onAddService,
 }) {
-  const completedServicesCount = client.services.filter(s => s.status === 'completed' || s.status === 'done').length;
+  const completedServicesCount = client.services.filter(
+    (s) => s.status === "completed" || s.status === "done",
+  ).length;
   const totalServicesCount = client.services.length;
-  const overallProgress = totalServicesCount > 0 ? Math.round((completedServicesCount / totalServicesCount) * 100) : 0;
+  const overallProgress =
+    totalServicesCount > 0
+      ? Math.round((completedServicesCount / totalServicesCount) * 100)
+      : 0;
 
   return (
     <div className="space-y-4">
@@ -1086,23 +1190,65 @@ function DocumentsTab({
     if (fileNameLower.startsWith("cert_")) return "cert";
 
     // Keyword search arrays
-    const kycKeywords = ["kyc", "pan", "aadhaar", "aadhar", "passport", "voter", "profile", "photo", "sign", "signature", "address", "utility", "bill"];
-    const itrKeywords = ["itr", "it", "income tax", "computation", "acknowledgement", "ack", "form 16", "form16", "26as", "traces", "tds"];
-    const certKeywords = ["certificate", "cert", "license", "registration", "gst", "gumasta", "udyam", "msme", "iec", "food", "fssai", "trademark", "roc", "incorporation", "mca"];
+    const kycKeywords = [
+      "kyc",
+      "pan",
+      "aadhaar",
+      "aadhar",
+      "passport",
+      "voter",
+      "profile",
+      "photo",
+      "sign",
+      "signature",
+      "address",
+      "utility",
+      "bill",
+    ];
+    const itrKeywords = [
+      "itr",
+      "it",
+      "income tax",
+      "computation",
+      "acknowledgement",
+      "ack",
+      "form 16",
+      "form16",
+      "26as",
+      "traces",
+      "tds",
+    ];
+    const certKeywords = [
+      "certificate",
+      "cert",
+      "license",
+      "registration",
+      "gst",
+      "gumasta",
+      "udyam",
+      "msme",
+      "iec",
+      "food",
+      "fssai",
+      "trademark",
+      "roc",
+      "incorporation",
+      "mca",
+    ];
 
     // 2. Filename keyword checks
-    if (kycKeywords.some(kw => fileNameLower.includes(kw))) return "kyc";
-    if (itrKeywords.some(kw => fileNameLower.includes(kw))) return "itr";
-    if (certKeywords.some(kw => fileNameLower.includes(kw))) return "cert";
+    if (kycKeywords.some((kw) => fileNameLower.includes(kw))) return "kyc";
+    if (itrKeywords.some((kw) => fileNameLower.includes(kw))) return "itr";
+    if (certKeywords.some((kw) => fileNameLower.includes(kw))) return "cert";
 
     // 3. Database client_service name checks
     if (doc.client_service_id) {
       const cs = client.services.find((s) => s.id === doc.client_service_id);
       if (cs && cs.service) {
         const serviceName = cs.service.name.toLowerCase();
-        if (kycKeywords.some(kw => serviceName.includes(kw))) return "kyc";
-        if (itrKeywords.some(kw => serviceName.includes(kw))) return "itr";
-        if (certKeywords.some(kw => serviceName.includes(kw))) return "cert";
+        if (kycKeywords.some((kw) => serviceName.includes(kw))) return "kyc";
+        if (itrKeywords.some((kw) => serviceName.includes(kw))) return "itr";
+        if (certKeywords.some((kw) => serviceName.includes(kw))) return "cert";
       }
     }
 
@@ -1111,9 +1257,51 @@ function DocumentsTab({
 
   // Helper to find a matching active client_service_id for a category key to link DB relation if possible
   const getFirstActiveServiceIdForCategory = (categoryKey) => {
-    const kycKeywords = ["kyc", "pan", "aadhaar", "aadhar", "passport", "voter", "profile", "photo", "sign", "signature", "address", "utility", "bill"];
-    const itrKeywords = ["itr", "it", "income tax", "computation", "acknowledgement", "ack", "form 16", "form16", "26as", "traces", "tds"];
-    const certKeywords = ["certificate", "cert", "license", "registration", "gst", "gumasta", "udyam", "msme", "iec", "food", "fssai", "trademark", "roc", "incorporation", "mca"];
+    const kycKeywords = [
+      "kyc",
+      "pan",
+      "aadhaar",
+      "aadhar",
+      "passport",
+      "voter",
+      "profile",
+      "photo",
+      "sign",
+      "signature",
+      "address",
+      "utility",
+      "bill",
+    ];
+    const itrKeywords = [
+      "itr",
+      "it",
+      "income tax",
+      "computation",
+      "acknowledgement",
+      "ack",
+      "form 16",
+      "form16",
+      "26as",
+      "traces",
+      "tds",
+    ];
+    const certKeywords = [
+      "certificate",
+      "cert",
+      "license",
+      "registration",
+      "gst",
+      "gumasta",
+      "udyam",
+      "msme",
+      "iec",
+      "food",
+      "fssai",
+      "trademark",
+      "roc",
+      "incorporation",
+      "mca",
+    ];
 
     let keywords = [];
     if (categoryKey === "kyc") keywords = kycKeywords;
@@ -1123,7 +1311,7 @@ function DocumentsTab({
     const activeService = client.services.find((s) => {
       if (!s.service) return false;
       const name = s.service.name.toLowerCase();
-      return keywords.some(kw => name.includes(kw));
+      return keywords.some((kw) => name.includes(kw));
     });
     return activeService ? activeService.id : null;
   };
@@ -1134,7 +1322,9 @@ function DocumentsTab({
   if (waNum.length === 10) waNum = "91" + waNum;
 
   // Filter General Documents
-  const generalDocs = client.documents.filter((doc) => getCategoryForDocument(doc) === "general");
+  const generalDocs = client.documents.filter(
+    (doc) => getCategoryForDocument(doc) === "general",
+  );
 
   return (
     <div className="space-y-6">
@@ -1146,7 +1336,9 @@ function DocumentsTab({
 
       {/* 3 Dedicated subsections (KYC, ITR, Certificates) */}
       {customSections.map((section) => {
-        const folderDocs = client.documents.filter((doc) => getCategoryForDocument(doc) === section.key);
+        const folderDocs = client.documents.filter(
+          (doc) => getCategoryForDocument(doc) === section.key,
+        );
         const csId = getFirstActiveServiceIdForCategory(section.key);
         return (
           <DocumentSection
@@ -1203,10 +1395,14 @@ function DocumentSection({
   // Emojis matching kyc, itr, certificates, and general folders
   const getEmojiIcon = (key) => {
     switch (key) {
-      case "kyc": return "👤";
-      case "itr": return "🏦";
-      case "cert": return "📜";
-      default: return "📁";
+      case "kyc":
+        return "👤";
+      case "itr":
+        return "🏦";
+      case "cert":
+        return "📜";
+      default:
+        return "📁";
     }
   };
 
@@ -1214,13 +1410,33 @@ function DocumentSection({
   const getColors = (key) => {
     switch (key) {
       case "kyc":
-        return { bg: "bg-rose-50/40", border: "border-rose-100", text: "text-rose-700", iconBg: "bg-rose-100/60" };
+        return {
+          bg: "bg-rose-50/40",
+          border: "border-rose-100",
+          text: "text-rose-700",
+          iconBg: "bg-rose-100/60",
+        };
       case "itr":
-        return { bg: "bg-teal-50/40", border: "border-teal-100", text: "text-teal-700", iconBg: "bg-teal-100/60" };
+        return {
+          bg: "bg-teal-50/40",
+          border: "border-teal-100",
+          text: "text-teal-700",
+          iconBg: "bg-teal-100/60",
+        };
       case "cert":
-        return { bg: "bg-blue-50/40", border: "border-blue-100", text: "text-blue-700", iconBg: "bg-blue-100/60" };
+        return {
+          bg: "bg-blue-50/40",
+          border: "border-blue-100",
+          text: "text-blue-700",
+          iconBg: "bg-blue-100/60",
+        };
       default:
-        return { bg: "bg-gray-50/40", border: "border-gray-100", text: "text-gray-700", iconBg: "bg-gray-100/60" };
+        return {
+          bg: "bg-gray-50/40",
+          border: "border-gray-100",
+          text: "text-gray-700",
+          iconBg: "bg-gray-100/60",
+        };
     }
   };
 
@@ -1230,9 +1446,13 @@ function DocumentSection({
   return (
     <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden transition-all duration-300 hover:shadow-md hover:border-gray-300">
       {/* Header Bar */}
-      <div className={`flex items-center justify-between px-5 py-4 border-b border-gray-100 ${colors.bg}`}>
+      <div
+        className={`flex items-center justify-between px-5 py-4 border-b border-gray-100 ${colors.bg}`}
+      >
         <div className="flex items-center gap-3">
-          <span className={`p-2 rounded-xl text-lg font-semibold flex items-center justify-center ${colors.iconBg} ${colors.text}`}>
+          <span
+            className={`p-2 rounded-xl text-lg font-semibold flex items-center justify-center ${colors.iconBg} ${colors.text}`}
+          >
             {iconEmoji}
           </span>
           <div>
@@ -1263,8 +1483,18 @@ function DocumentSection({
                 </>
               ) : (
                 <>
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
+                  <svg
+                    className="w-3.5 h-3.5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2.5}
+                      d="M12 4v16m8-8H4"
+                    />
                   </svg>
                   <span>Add Document</span>
                 </>
@@ -1281,8 +1511,14 @@ function DocumentSection({
                   let fileToUpload = file;
                   if (serviceKey !== "general") {
                     const prefix = `${serviceKey.toUpperCase()}_`;
-                    if (!file.name.toUpperCase().startsWith(serviceKey.toUpperCase())) {
-                      fileToUpload = new File([file], `${prefix}${file.name}`, { type: file.type });
+                    if (
+                      !file.name
+                        .toUpperCase()
+                        .startsWith(serviceKey.toUpperCase())
+                    ) {
+                      fileToUpload = new File([file], `${prefix}${file.name}`, {
+                        type: file.type,
+                      });
                     }
                   }
                   onUpload(fileToUpload, csId);
@@ -1302,17 +1538,22 @@ function DocumentSection({
           <div className="w-10 h-10 bg-gray-100/70 rounded-full flex items-center justify-center mx-auto mb-2.5 text-gray-400 text-base">
             📂
           </div>
-          <p className="text-xs font-medium text-gray-500">No documents uploaded yet</p>
+          <p className="text-xs font-medium text-gray-500">
+            No documents uploaded yet
+          </p>
           <p className="text-[10px] text-gray-400 mt-1 max-w-[250px] mx-auto leading-relaxed">
-            {isAdmin 
-              ? "Click \"Add Document\" above to upload your first certificate or file." 
+            {isAdmin
+              ? 'Click "Add Document" above to upload your first certificate or file.'
               : "Documents for this service will appear here once uploaded."}
           </p>
         </div>
       ) : (
         <div className="divide-y divide-gray-100">
           {documents.map((doc) => (
-            <div key={doc.id} className="flex items-center justify-between gap-4 px-5 py-3.5 hover:bg-gray-50/40 transition-colors group">
+            <div
+              key={doc.id}
+              className="flex items-center justify-between gap-4 px-5 py-3.5 hover:bg-gray-50/40 transition-colors group"
+            >
               <div className="flex items-center gap-3 min-w-0">
                 {/* File type icon */}
                 <span className="text-xl p-2 bg-gray-50 rounded-lg group-hover:bg-white transition-colors border border-gray-100 flex-shrink-0">
@@ -1320,15 +1561,26 @@ function DocumentSection({
                 </span>
 
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold text-gray-900 truncate hover:text-blue-600 transition-colors" title={doc.file_name}>
-                    <a href={doc.file_url} target="_blank" rel="noopener noreferrer">
+                  <p
+                    className="text-sm font-semibold text-gray-900 truncate hover:text-blue-600 transition-colors"
+                    title={doc.file_name}
+                  >
+                    <a
+                      href={doc.file_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
                       {doc.file_name}
                     </a>
                   </p>
                   <p className="text-[11px] text-gray-500 mt-0.5 flex items-center gap-1.5 flex-wrap">
-                    <span className="font-medium text-gray-400 uppercase">{doc.file_type}</span>
+                    <span className="font-medium text-gray-400 uppercase">
+                      {doc.file_type}
+                    </span>
                     <span className="w-1 h-1 bg-gray-300 rounded-full" />
-                    <span>{doc.file_size_kb ? `${doc.file_size_kb} KB` : "— KB"}</span>
+                    <span>
+                      {doc.file_size_kb ? `${doc.file_size_kb} KB` : "— KB"}
+                    </span>
                     <span className="w-1 h-1 bg-gray-300 rounded-full" />
                     <span>
                       {new Date(doc.created_at).toLocaleDateString("en-IN", {
@@ -1340,7 +1592,9 @@ function DocumentSection({
                     {doc.uploader && (
                       <>
                         <span className="w-1 h-1 bg-gray-300 rounded-full" />
-                        <span className="text-blue-600 font-medium text-[11px]">Uploaded by {doc.uploader.name}</span>
+                        <span className="text-blue-600 font-medium text-[11px]">
+                          Uploaded by {doc.uploader.name}
+                        </span>
                       </>
                     )}
                   </p>
@@ -1357,7 +1611,9 @@ function DocumentSection({
                         : "bg-gray-50 border-gray-100 text-gray-400"
                     }`}
                 >
-                  {doc.visible_to_client ? "Visible to client" : "Internal Only"}
+                  {doc.visible_to_client
+                    ? "Visible to client"
+                    : "Internal Only"}
                 </span>
 
                 {/* Actions Row */}
@@ -1370,22 +1626,36 @@ function DocumentSection({
                     className="text-gray-400 hover:text-blue-600 hover:bg-blue-50 p-1.5 rounded-lg transition-all"
                     title="Download / View"
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                      />
                     </svg>
                   </a>
 
                   {/* Send via WhatsApp */}
                   <a
                     href={`https://wa.me/${waNum}?text=${encodeURIComponent(
-                      `Hello ${clientName},\n\nHere is your document: *${doc.file_name}*\n\nYou can view and download it here: ${doc.file_url}\n\nRegards,\nPTC Portal`
+                      `Hello ${clientName},\n\nHere is your document: *${doc.file_name}*\n\nYou can view and download it here: ${doc.file_url}\n\nRegards,\nPTC Portal`,
                     )}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-gray-400 hover:text-green-500 hover:bg-green-50 p-1.5 rounded-lg transition-all"
                     title="Send via WhatsApp"
                   >
-                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                    <svg
+                      className="w-4 h-4"
+                      fill="currentColor"
+                      viewBox="0 0 24 24"
+                    >
                       <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
                     </svg>
                   </a>
@@ -1396,9 +1666,18 @@ function DocumentSection({
                       <button
                         onClick={() => onToggleVisibility(doc.id)}
                         className="text-gray-400 hover:text-blue-600 hover:bg-blue-50 p-1.5 rounded-lg transition-all"
-                        title={doc.visible_to_client ? "Hide from client portal" : "Show in client portal"}
+                        title={
+                          doc.visible_to_client
+                            ? "Hide from client portal"
+                            : "Show in client portal"
+                        }
                       >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
                           <path
                             strokeLinecap="round"
                             strokeLinejoin="round"
@@ -1415,14 +1694,21 @@ function DocumentSection({
                       {/* Delete */}
                       <button
                         onClick={() => {
-                          if (window.confirm("Delete this document permanently?")) {
+                          if (
+                            window.confirm("Delete this document permanently?")
+                          ) {
                             onDelete(doc.id);
                           }
                         }}
                         className="text-gray-400 hover:text-red-500 hover:bg-red-50 p-1.5 rounded-lg transition-all"
                         title="Delete permanently"
                       >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
                           <path
                             strokeLinecap="round"
                             strokeLinejoin="round"
@@ -1489,7 +1775,8 @@ function TasksTab({ client, isAdmin, onRefresh }) {
   const deleteTaskMutation = useMutation({
     mutationFn: (taskId) => deleteTask(taskId),
     onSuccess: onRefresh,
-    onError: (err) => alert(err.response?.data?.detail || "Failed to delete task"),
+    onError: (err) =>
+      alert(err.response?.data?.detail || "Failed to delete task"),
   });
 
   return (
@@ -1591,13 +1878,19 @@ function TasksTab({ client, isAdmin, onRefresh }) {
             </thead>
             <tbody className="divide-y divide-gray-100">
               {client.tasks.map((task) => (
-                <tr key={task.id} className="hover:bg-gray-50/50 transition-colors">
+                <tr
+                  key={task.id}
+                  className="hover:bg-gray-50/50 transition-colors"
+                >
                   <td className="px-5 py-3">
                     <div className="flex items-center gap-3">
                       <button
                         onClick={() =>
                           task.status !== "done" &&
-                          updateTaskStatus.mutate({ taskId: task.id, status: "done" })
+                          updateTaskStatus.mutate({
+                            taskId: task.id,
+                            status: "done",
+                          })
                         }
                         className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 transition-colors ${
                           task.status === "done"
@@ -1633,7 +1926,9 @@ function TasksTab({ client, isAdmin, onRefresh }) {
                     </div>
                   </td>
                   <td className="px-5 py-3 text-sm text-gray-600">
-                    {task.assignee?.name || <span className="text-gray-400">—</span>}
+                    {task.assignee?.name || (
+                      <span className="text-gray-400">—</span>
+                    )}
                   </td>
                   <td className="px-5 py-3 text-sm text-gray-600">
                     {task.due_date ? (
@@ -1654,7 +1949,7 @@ function TasksTab({ client, isAdmin, onRefresh }) {
                           onClick={() => {
                             if (
                               window.confirm(
-                                `Are you sure you want to delete the task "${task.title}"?`
+                                `Are you sure you want to delete the task "${task.title}"?`,
                               )
                             ) {
                               deleteTaskMutation.mutate(task.id);
@@ -1804,7 +2099,7 @@ function EditClientModal({ client, onClose, onSuccess }) {
     setFetching(true);
     try {
       const { verifyGstCaptcha } = await import("../../api");
-      const result = await verifyGstCaptcha(sessionId, captchaText);
+      const result = await verifyGstCaptcha(sessionId, captchaText, client.id);
       if (result.success && result.data) {
         const d = result.data;
         setForm((p) => ({
@@ -1847,7 +2142,9 @@ function EditClientModal({ client, onClose, onSuccess }) {
           }));
         }
 
-        setFetchError(`✓ Fetched: ${d.legal_name || d.trade_name || "Details loaded"}`);
+        setFetchError(
+          `✓ Fetched: ${d.legal_name || d.trade_name || "Details loaded"}`,
+        );
         setShowCaptcha(false);
         setCaptchaImage(null);
         setCaptchaText("");
@@ -2070,33 +2367,68 @@ function EditClientModal({ client, onClose, onSuccess }) {
                     }
                     className="px-3 py-1.5 text-xs bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 flex items-center gap-1"
                   >
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>
+                    <svg
+                      className="w-3 h-3"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 4v16m8-8H4"
+                      />
+                    </svg>
                     Add Director / Partner
                   </button>
                 </div>
 
                 {form.directors.length === 0 ? (
                   <div className="text-center py-10 bg-gray-50 border border-gray-100 rounded-xl">
-                    <p className="text-xs text-gray-500 mb-2">No directors/partners added yet.</p>
-                    <p className="text-xs text-gray-400">Click the "Add Director / Partner" button to add one.</p>
+                    <p className="text-xs text-gray-500 mb-2">
+                      No directors/partners added yet.
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      Click the "Add Director / Partner" button to add one.
+                    </p>
                   </div>
                 ) : (
                   <div className="space-y-4">
                     {form.directors.map((director, index) => (
-                      <div key={index} className="relative p-4 border border-gray-200 rounded-xl bg-gray-50">
+                      <div
+                        key={index}
+                        className="relative p-4 border border-gray-200 rounded-xl bg-gray-50"
+                      >
                         <button
                           onClick={() =>
                             setForm((p) => ({
                               ...p,
-                              directors: p.directors.filter((_, i) => i !== index),
+                              directors: p.directors.filter(
+                                (_, i) => i !== index,
+                              ),
                             }))
                           }
                           className="absolute top-3 right-3 text-red-500 hover:text-red-700 bg-white rounded-full p-1 shadow-sm transition-colors"
                           title="Remove"
                         >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                            />
+                          </svg>
                         </button>
-                        <h4 className="text-xs font-semibold text-gray-700 mb-3">Member #{index + 1}</h4>
+                        <h4 className="text-xs font-semibold text-gray-700 mb-3">
+                          Member #{index + 1}
+                        </h4>
                         <div className="grid grid-cols-2 gap-3">
                           <Field
                             label="Full Name *"
@@ -2425,7 +2757,9 @@ function EditClientModal({ client, onClose, onSuccess }) {
                   GST Return Status
                 </p>
                 <div className="flex items-center gap-2">
-                  <label className="text-xs font-semibold text-gray-500">Financial Year:</label>
+                  <label className="text-xs font-semibold text-gray-500">
+                    Financial Year:
+                  </label>
                   <select
                     value={selectedYear}
                     onChange={(e) => setSelectedYear(e.target.value)}
@@ -2441,14 +2775,70 @@ function EditClientModal({ client, onClose, onSuccess }) {
                 Portal. These boxes are read-only.
               </p>
               <div className="grid grid-cols-2 gap-3">
-                <FilingStatusBox returnType="GSTR1 / IFF" status={selectedYear === "previous" ? form.gstr1_iff_status_prev : form.gstr1_iff_status} />
-                <FilingStatusBox returnType="GSTR3B" status={selectedYear === "previous" ? form.gstr3b_status_prev : form.gstr3b_status} />
-                <FilingStatusBox returnType="GSTR4" status={selectedYear === "previous" ? form.gstr4_status_prev : form.gstr4_status} />
-                <FilingStatusBox returnType="CMP-08" status={selectedYear === "previous" ? form.cmp08_status_prev : form.cmp08_status} />
-                <FilingStatusBox returnType="GSTR4 (Annual)" status={selectedYear === "previous" ? form.gstr4_annual_status_prev : form.gstr4_annual_status} />
-                <FilingStatusBox returnType="GSTR9 (Annual)" status={selectedYear === "previous" ? form.gstr9_annual_status_prev : form.gstr9_annual_status} />
-                <FilingStatusBox returnType="GSTR9C" status={selectedYear === "previous" ? form.gstr9c_status_prev : form.gstr9c_status} />
-                <FilingStatusBox returnType="GSTR1A" status={selectedYear === "previous" ? form.gstr1a_status_prev : form.gstr1a_status} />
+                <FilingStatusBox
+                  returnType="GSTR1 / IFF"
+                  status={
+                    selectedYear === "previous"
+                      ? form.gstr1_iff_status_prev
+                      : form.gstr1_iff_status
+                  }
+                />
+                <FilingStatusBox
+                  returnType="GSTR3B"
+                  status={
+                    selectedYear === "previous"
+                      ? form.gstr3b_status_prev
+                      : form.gstr3b_status
+                  }
+                />
+                <FilingStatusBox
+                  returnType="GSTR4"
+                  status={
+                    selectedYear === "previous"
+                      ? form.gstr4_status_prev
+                      : form.gstr4_status
+                  }
+                />
+                <FilingStatusBox
+                  returnType="CMP-08"
+                  status={
+                    selectedYear === "previous"
+                      ? form.cmp08_status_prev
+                      : form.cmp08_status
+                  }
+                />
+                <FilingStatusBox
+                  returnType="GSTR4 (Annual)"
+                  status={
+                    selectedYear === "previous"
+                      ? form.gstr4_annual_status_prev
+                      : form.gstr4_annual_status
+                  }
+                />
+                <FilingStatusBox
+                  returnType="GSTR9 (Annual)"
+                  status={
+                    selectedYear === "previous"
+                      ? form.gstr9_annual_status_prev
+                      : form.gstr9_annual_status
+                  }
+                />
+                <FilingStatusBox
+                  returnType="GSTR9C"
+                  status={
+                    selectedYear === "previous"
+                      ? form.gstr9c_status_prev
+                      : form.gstr9c_status
+                  }
+                />
+                <FilingStatusBox
+                  returnType="GSTR1A"
+                  status={
+                    selectedYear === "previous"
+                      ? form.gstr1a_status_prev
+                      : form.gstr1a_status
+                  }
+                />
               </div>
             </div>
           )}
@@ -2547,13 +2937,17 @@ function CredentialField({ label, value, placeholder, isPassword }) {
   return (
     <div className="bg-white border border-gray-100 rounded-xl p-3.5 shadow-sm flex flex-col justify-between min-h-[90px]">
       <div>
-        <p className="text-gray-400 text-[10px] uppercase font-bold tracking-wider mb-1">{label}</p>
+        <p className="text-gray-400 text-[10px] uppercase font-bold tracking-wider mb-1">
+          {label}
+        </p>
         {value ? (
           <p className="text-sm font-semibold text-gray-900 font-mono break-all pr-8">
             {show ? value : "••••••••••••"}
           </p>
         ) : (
-          <p className="text-sm italic text-gray-300 font-medium">{placeholder}</p>
+          <p className="text-sm italic text-gray-300 font-medium">
+            {placeholder}
+          </p>
         )}
       </div>
 
@@ -2566,12 +2960,32 @@ function CredentialField({ label, value, placeholder, isPassword }) {
               title={show ? "Hide Password" : "Show Password"}
             >
               {show ? (
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/>
+                <svg
+                  className="w-3.5 h-3.5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
+                  />
                 </svg>
               ) : (
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                <svg
+                  className="w-3.5 h-3.5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                  />
                 </svg>
               )}
             </button>
@@ -2581,8 +2995,18 @@ function CredentialField({ label, value, placeholder, isPassword }) {
             className="p-1 hover:bg-gray-50 rounded text-gray-400 hover:text-gray-600 transition-colors flex items-center gap-1 text-[10px] font-semibold"
             title="Copy to clipboard"
           >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/>
+            <svg
+              className="w-3.5 h-3.5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"
+              />
             </svg>
             <span>{copied ? "Copied!" : "Copy"}</span>
           </button>

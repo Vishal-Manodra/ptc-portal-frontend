@@ -2,7 +2,12 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { getClients, createClient, toggleClientStatus, deleteClient } from "../../api";
+import {
+  getClients,
+  createClient,
+  toggleClientStatus,
+  deleteClient,
+} from "../../api";
 import Layout from "../../components/layout/Layout";
 import Badge from "../../components/ui/Badge";
 import Spinner from "../../components/ui/Spinner";
@@ -49,20 +54,20 @@ export default function Clients() {
     },
     onError: (err) => {
       alert(err.response?.data?.detail || "Failed to delete client");
-    }
+    },
   });
 
   // Extract unique services and assigned employee names dynamically from client data
   const uniqueServices = Array.from(
     new Set(
-      clients.flatMap((c) => c.services?.map((cs) => cs.service?.name).filter(Boolean) || [])
-    )
+      clients.flatMap(
+        (c) => c.services?.map((cs) => cs.service?.name).filter(Boolean) || [],
+      ),
+    ),
   ).sort();
 
   const uniqueEmployees = Array.from(
-    new Set(
-      clients.map((c) => c.assigned_employee?.name).filter(Boolean)
-    )
+    new Set(clients.map((c) => c.assigned_employee?.name).filter(Boolean)),
   ).sort();
 
   const filtered = clients.filter((c) => {
@@ -70,13 +75,15 @@ export default function Clients() {
       c.business_name.toLowerCase().includes(search.toLowerCase()) ||
       c.pan?.toLowerCase().includes(search.toLowerCase()) ||
       c.gstin?.toLowerCase().includes(search.toLowerCase());
-    
+
     const matchesStatus = statusFilter === "all" || c.status === statusFilter;
-    
-    const matchesService = serviceFilter === "all" || 
+
+    const matchesService =
+      serviceFilter === "all" ||
       c.services?.some((cs) => cs.service?.name === serviceFilter);
-    
-    const matchesAssigned = assignedFilter === "all" ||
+
+    const matchesAssigned =
+      assignedFilter === "all" ||
       (assignedFilter === "unassigned" && !c.assigned_employee) ||
       c.assigned_employee?.name === assignedFilter;
 
@@ -110,7 +117,7 @@ export default function Clients() {
                          focus:outline-none focus:ring-2 focus:ring-blue-500 w-72"
             />
           </div>
-          
+
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
@@ -254,10 +261,14 @@ export default function Clients() {
                     <td className="px-4 py-3">
                       {(() => {
                         const doneCount = client.services.filter(
-                          (s) => s.status === "completed" || s.status === "done"
+                          (s) =>
+                            s.status === "completed" || s.status === "done",
                         ).length;
                         const totalCount = client.services.length;
-                        const pct = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0;
+                        const pct =
+                          totalCount > 0
+                            ? Math.round((doneCount / totalCount) * 100)
+                            : 0;
                         return (
                           <div className="flex items-center gap-2 max-w-[120px]">
                             <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
@@ -266,7 +277,9 @@ export default function Clients() {
                                 style={{ width: `${pct}%` }}
                               />
                             </div>
-                            <span className="text-xs font-semibold text-gray-700">{pct}%</span>
+                            <span className="text-xs font-semibold text-gray-700">
+                              {pct}%
+                            </span>
                           </div>
                         );
                       })()}
@@ -302,23 +315,52 @@ export default function Clients() {
                           className="p-1.5 hover:bg-blue-50 text-blue-600 hover:text-blue-800 rounded-lg transition-all focus:outline-none"
                           title="View Client Details"
                         >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          <svg
+                            className="w-5 h-5"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                            />
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                            />
                           </svg>
                         </button>
                         {isAdmin && (
                           <button
                             onClick={() => {
-                              if (window.confirm(`Are you sure you want to permanently delete "${client.business_name}"? All associated services, tasks, and documents will be deleted permanently.`)) {
+                              if (
+                                window.confirm(
+                                  `Are you sure you want to permanently delete "${client.business_name}"? All associated services, tasks, and documents will be deleted permanently.`,
+                                )
+                              ) {
                                 deleteMutation.mutate(client.id);
                               }
                             }}
                             className="p-1.5 hover:bg-red-50 text-red-500 hover:text-red-700 rounded-lg transition-all focus:outline-none"
                             title="Delete Client"
                           >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            <svg
+                              className="w-5 h-5"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                              />
                             </svg>
                           </button>
                         )}
@@ -410,24 +452,7 @@ function AddClientModal({ onClose, onSuccess }) {
     ptec_id: "",
     ptec_password: "",
     directors: [],
-    // GST Filing Return Statuses (Current Year)
-    gstr1_iff_status: "",
-    gstr3b_status: "",
-    gstr4_status: "",
-    cmp08_status: "",
-    gstr4_annual_status: "",
-    gstr9_annual_status: "",
-    gstr9c_status: "",
-    gstr1a_status: "",
-    // GST Filing Return Statuses (Previous Year)
-    gstr1_iff_status_prev: "",
-    gstr3b_status_prev: "",
-    gstr4_status_prev: "",
-    cmp08_status_prev: "",
-    gstr4_annual_status_prev: "",
-    gstr9_annual_status_prev: "",
-    gstr9c_status_prev: "",
-    gstr1a_status_prev: "",
+    gst_summary: {},
   });
 
   const [selectedYear, setSelectedYear] = useState("current");
@@ -478,17 +503,24 @@ function AddClientModal({ onClose, onSuccess }) {
       console.log("GST DATA:");
       console.log(result.data);
       if (result.success && result.data) {
+        const d = result.data;
         console.log("FILINGS:", d.filings);
+        console.log("SETTING GST SUMMARY:");
+        console.log(d.filings);
+
         setForm((p) => ({
           ...p,
 
           // Basic tab
           business_name: d.trade_name || d.legal_name || p.business_name,
+
           contact_person: d.legal_name || p.contact_person,
+
           contact_name: d.legal_name || p.contact_name,
+
           address: d.principal_place || p.address,
 
-          // GST tab fields
+          // GST tab
           gstin_status: d.status || "",
 
           constitution: d.constitution || "",
@@ -502,34 +534,14 @@ function AddClientModal({ onClose, onSuccess }) {
           principal_place: d.principal_place || "",
 
           business_activity: d.business_activity || "",
+
+          // FULL GST SUMMARY
+          gst_summary: {
+            current: d.filings?.current || {},
+
+            previous: d.filings?.previous || {},
+          },
         }));
-
-        // Populate filing return statuses (current and previous)
-        if (d.filings) {
-          const f = d.filings;
-          const cur = f.current ? f.current : f;
-          const prev = f.previous ? f.previous : {};
-          setForm((p) => ({
-            ...p,
-            gstr1_iff_status: cur.gstr1_iff?.status || "N/A",
-            gstr3b_status: cur.gstr3b?.status || "N/A",
-            gstr4_status: cur.gstr4?.status || "N/A",
-            cmp08_status: cur.cmp08?.status || "N/A",
-            gstr4_annual_status: cur.gstr4_annual?.status || "N/A",
-            gstr9_annual_status: cur.gstr9_annual?.status || "N/A",
-            gstr9c_status: cur.gstr9c?.status || "N/A",
-            gstr1a_status: cur.gstr1a?.status || "N/A",
-            gstr1_iff_status_prev: prev.gstr1_iff?.status || "N/A",
-            gstr3b_status_prev: prev.gstr3b?.status || "N/A",
-            gstr4_status_prev: prev.gstr4?.status || "N/A",
-            cmp08_status_prev: prev.cmp08?.status || "N/A",
-            gstr4_annual_status_prev: prev.gstr4_annual?.status || "N/A",
-            gstr9_annual_status_prev: prev.gstr9_annual?.status || "N/A",
-            gstr9c_status_prev: prev.gstr9c?.status || "N/A",
-            gstr1a_status_prev: prev.gstr1a?.status || "N/A",
-          }));
-        }
-
         setFetchError(
           `✓ Fetched: ${d.legal_name || d.trade_name || "Details loaded"}`,
         );
@@ -557,7 +569,7 @@ function AddClientModal({ onClose, onSuccess }) {
     { key: "roc", label: "ROC / MCA" },
     { key: "filings", label: "GST Returns" },
   ];
-
+  console.log("FORM GST SUMMARY:", form.gst_summary);
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
@@ -754,33 +766,68 @@ function AddClientModal({ onClose, onSuccess }) {
                     }
                     className="px-3 py-1.5 text-xs bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 flex items-center gap-1"
                   >
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>
+                    <svg
+                      className="w-3 h-3"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 4v16m8-8H4"
+                      />
+                    </svg>
                     Add Director / Partner
                   </button>
                 </div>
 
                 {form.directors.length === 0 ? (
                   <div className="text-center py-10 bg-gray-50 border border-gray-100 rounded-xl">
-                    <p className="text-xs text-gray-500 mb-2">No directors/partners added yet.</p>
-                    <p className="text-xs text-gray-400">Click the "Add Director / Partner" button to add one.</p>
+                    <p className="text-xs text-gray-500 mb-2">
+                      No directors/partners added yet.
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      Click the "Add Director / Partner" button to add one.
+                    </p>
                   </div>
                 ) : (
                   <div className="space-y-4">
                     {form.directors.map((director, index) => (
-                      <div key={index} className="relative p-4 border border-gray-200 rounded-xl bg-gray-50">
+                      <div
+                        key={index}
+                        className="relative p-4 border border-gray-200 rounded-xl bg-gray-50"
+                      >
                         <button
                           onClick={() =>
                             setForm((p) => ({
                               ...p,
-                              directors: p.directors.filter((_, i) => i !== index),
+                              directors: p.directors.filter(
+                                (_, i) => i !== index,
+                              ),
                             }))
                           }
                           className="absolute top-3 right-3 text-red-500 hover:text-red-700 bg-white rounded-full p-1 shadow-sm transition-colors"
                           title="Remove"
                         >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                            />
+                          </svg>
                         </button>
-                        <h4 className="text-xs font-semibold text-gray-700 mb-3">Member #{index + 1}</h4>
+                        <h4 className="text-xs font-semibold text-gray-700 mb-3">
+                          Member #{index + 1}
+                        </h4>
                         <div className="grid grid-cols-2 gap-3">
                           <Field
                             label="Full Name *"
@@ -1108,8 +1155,12 @@ function AddClientModal({ onClose, onSuccess }) {
                 <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
                   GST Return Status
                 </p>
+
                 <div className="flex items-center gap-2">
-                  <label className="text-xs font-semibold text-gray-500">Financial Year:</label>
+                  <label className="text-xs font-semibold text-gray-500">
+                    Financial Year:
+                  </label>
+
                   <select
                     value={selectedYear}
                     onChange={(e) => setSelectedYear(e.target.value)}
@@ -1120,24 +1171,77 @@ function AddClientModal({ onClose, onSuccess }) {
                   </select>
                 </div>
               </div>
+
               <p className="text-xs text-gray-400 -mt-2">
-                Filing statuses are auto-populated when you fetch from the GST
-                Portal. These boxes are read-only.
+                Filing statuses are auto-populated from GST Portal.
               </p>
-              <div className="grid grid-cols-2 gap-3">
-                <FilingStatusBox returnType="GSTR1 / IFF" status={selectedYear === "previous" ? form.gstr1_iff_status_prev : form.gstr1_iff_status} />
-                <FilingStatusBox returnType="GSTR3B" status={selectedYear === "previous" ? form.gstr3b_status_prev : form.gstr3b_status} />
-                <FilingStatusBox returnType="GSTR4" status={selectedYear === "previous" ? form.gstr4_status_prev : form.gstr4_status} />
-                <FilingStatusBox returnType="CMP-08" status={selectedYear === "previous" ? form.cmp08_status_prev : form.cmp08_status} />
-                <FilingStatusBox returnType="GSTR4 (Annual)" status={selectedYear === "previous" ? form.gstr4_annual_status_prev : form.gstr4_annual_status} />
-                <FilingStatusBox returnType="GSTR9 (Annual)" status={selectedYear === "previous" ? form.gstr9_annual_status_prev : form.gstr9_annual_status} />
-                <FilingStatusBox returnType="GSTR9C" status={selectedYear === "previous" ? form.gstr9c_status_prev : form.gstr9c_status} />
-                <FilingStatusBox returnType="GSTR1A" status={selectedYear === "previous" ? form.gstr1a_status_prev : form.gstr1a_status} />
-              </div>
+
+              {(() => {
+                const filings =
+                  selectedYear === "previous"
+                    ? form.gst_summary?.previous || {}
+                    : form.gst_summary?.current || {};
+
+                const getLatestStatus = (returnType) => {
+                  const filing = filings?.[returnType];
+
+                  if (!filing) return "N/A";
+
+                  const months = Object.keys(filing);
+
+                  if (!months.length) return "N/A";
+
+                  const latestMonth = filing[months[0]];
+
+                  return latestMonth?.status || "N/A";
+                };
+
+                return (
+                  <div className="grid grid-cols-2 gap-3">
+                    <FilingStatusBox
+                      returnType="GSTR1 / IFF"
+                      status={getLatestStatus("gstr1_iff")}
+                    />
+
+                    <FilingStatusBox
+                      returnType="GSTR3B"
+                      status={getLatestStatus("gstr3b")}
+                    />
+
+                    <FilingStatusBox
+                      returnType="GSTR4"
+                      status={getLatestStatus("gstr4")}
+                    />
+
+                    <FilingStatusBox
+                      returnType="CMP-08"
+                      status={getLatestStatus("cmp08")}
+                    />
+
+                    <FilingStatusBox
+                      returnType="GSTR4 (Annual)"
+                      status={getLatestStatus("gstr4_annual")}
+                    />
+
+                    <FilingStatusBox
+                      returnType="GSTR9 (Annual)"
+                      status={getLatestStatus("gstr9_annual")}
+                    />
+
+                    <FilingStatusBox
+                      returnType="GSTR9C"
+                      status={getLatestStatus("gstr9c")}
+                    />
+
+                    <FilingStatusBox
+                      returnType="GSTR1A"
+                      status={getLatestStatus("gstr1a")}
+                    />
+                  </div>
+                );
+              })()}
             </div>
           )}
-
-
 
           {activeSection === "ptrc" && (
             <div className="space-y-4">
@@ -1319,10 +1423,7 @@ function FilingStatusBox({ returnType, status }) {
     textColor = "text-emerald-700";
     emoji = "✅";
     label = "Filed";
-  } else if (
-    s.includes("pending") ||
-    s.includes("not filed")
-  ) {
+  } else if (s.includes("pending") || s.includes("not filed")) {
     borderColor = "border-amber-300";
     bgColor = "bg-amber-50/60";
     textColor = "text-amber-700";
@@ -1340,9 +1441,7 @@ function FilingStatusBox({ returnType, status }) {
     <div
       className={`p-3 rounded-xl border-2 ${borderColor} ${bgColor} cursor-not-allowed select-none transition-all`}
     >
-      <p className="text-xs font-bold text-gray-800 mb-1.5">
-        {returnType}
-      </p>
+      <p className="text-xs font-bold text-gray-800 mb-1.5">{returnType}</p>
 
       <span
         className={`inline-flex items-center gap-1 text-xs font-semibold ${textColor} px-2 py-0.5 rounded-full`}

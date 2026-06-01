@@ -75,17 +75,27 @@ export const getGstCaptcha = async (gstin) => {
 };
 
 // STEP 2: Send the session ID and the text the human typed to get the final data
-export const verifyGstCaptcha = async (sessionId, captchaText) => {
+export const verifyGstCaptcha = async (
+  sessionId,
+  captchaText,
+  clientId = null,
+) => {
   const response = await api.post("/gst/verify", {
     session_id: sessionId,
     captcha_text: captchaText,
+    client_id: clientId,
   });
+
   return response.data;
-  // Returns: { success: true, data: { legal_name: "...", trade_name: "...", status: "..." } }
 };
 
 export const fetchGSTDetails = async (gstin) => {
   const response = await api.get(`/clients/fetch-gst/${gstin}`);
+  return response.data;
+};
+
+export const getClientGSTFilings = async (clientId) => {
+  const response = await api.get(`/clients/${clientId}/gst-filings`);
   return response.data;
 };
 
@@ -227,4 +237,3 @@ export const sendGstReminders = async (payload) => {
 };
 
 export default api;
-
