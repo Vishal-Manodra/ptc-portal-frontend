@@ -6,7 +6,7 @@
 import axios from "axios";
 
 // Base URL of your backend — change this when you deploy
-const BASE_URL = "http://127.0.0.1:8000";
+const BASE_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
 
 // Create an axios instance with default settings
 // Every request made through "api" will automatically include these settings
