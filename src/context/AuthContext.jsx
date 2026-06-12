@@ -4,8 +4,8 @@
 // through every single component — very messy.
 // With context, any component just calls useAuth() and gets the current user.
 
-import React, { createContext, useContext, useState, useEffect } from "react";
-import { loginUser } from "../api";
+import { createContext, useContext, useState, useEffect } from "react";
+import { loginUser, loginWithGoogle } from "../api";
 
 // Create the context object
 const AuthContext = createContext(null);
@@ -31,31 +31,30 @@ export function AuthProvider({ children }) {
     setLoading(false);
   }, []);
 
-  const login = async (email, password) => {
-    // Call the backend login endpoint
-    const data = await loginUser(email, password);
-    // data = { access_token, role, name, user_id }
-
-    // Save to state (for this session)
-    setToken(data.access_token);
-    setUser({
+  const saveSession = (data) => {
+    const sessionUser = {
       id: data.user_id,
       name: data.name,
       role: data.role,
-    });
+    };
 
-    // Save to localStorage (persists after refresh)
+    setToken(data.access_token);
+    setUser(sessionUser);
+
     localStorage.setItem("token", data.access_token);
-    localStorage.setItem(
-      "user",
-      JSON.stringify({
-        id: data.user_id,
-        name: data.name,
-        role: data.role,
-      })
-    );
+    localStorage.setItem("user", JSON.stringify(sessionUser));
 
     return data;
+  };
+
+  const login = async (email, password) => {
+    const data = await loginUser(email, password);
+    return saveSession(data);
+  };
+
+  const googleLogin = async (credential) => {
+    const data = await loginWithGoogle(credential);
+    return saveSession(data);
   };
 
   const logout = () => {
@@ -74,7 +73,17 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, token, login, logout, loading, isAdmin, isEmployee, isClient }}
+      value={{
+        user,
+        token,
+        login,
+        googleLogin,
+        logout,
+        loading,
+        isAdmin,
+        isEmployee,
+        isClient,
+      }}
     >
       {/* Don't render anything until we know if user is logged in */}
       {!loading && children}

@@ -50,6 +50,11 @@ export const loginUser = async (email, password) => {
   // returns: { access_token, role, name, user_id }
 };
 
+export const loginWithGoogle = async (credential) => {
+  const response = await api.post("/auth/google", { credential });
+  return response.data;
+};
+
 export const getMe = async () => {
   const response = await api.get("/auth/me");
   return response.data;
@@ -236,4 +241,124 @@ export const sendGstReminders = async (payload) => {
   return response.data;
 };
 
+export const testWhatsappAuth = async () => {
+  const response = await api.get("/whatsapp/test-auth");
+  return response.data;
+};
+
+export const getConversation = async (clientId) => {
+  const response = await api.get(`/whatsapp/conversation/${clientId}`);
+  return response.data;
+};
+
+export const getClientGstSummary = async (clientId) => {
+  const response = await api.get(`/clients/${clientId}/gst-summary`);
+
+  return response.data;
+};
+
 export default api;
+//── WORKFLOWS & TASKS ──────────────────────────────────
+
+export const getWorkflowDashboard = async () => {
+  const res = await api.get("/workflows/dashboard");
+  return res.data;
+};
+
+export const getClientWorkflows = async () => {
+  const res = await api.get("/workflows/client-workflows");
+  return res.data;
+};
+
+export const getEmployeeWorkSummary = () =>
+  api.get("/workflows/employees/work-summary").then((res) => res.data);
+
+export const getMyTasks = async () => {
+  const res = await api.get("/workflows/my-tasks");
+  return res.data;
+};
+
+export const getPendingApprovals = async () => {
+  const res = await api.get("/workflows/pending-approvals");
+  return res.data;
+};
+
+export const approveWorkflowTask = async (taskId) => {
+  const res = await api.patch(`/workflows/tasks/${taskId}/approve`);
+
+  return res.data;
+};
+
+export const getActivityLogs = async () => {
+  const res = await api.get("/workflows/activity-logs");
+  return res.data;
+};
+
+export const createWorkflowTemplate = async (data) => {
+  const res = await api.post("/workflows/templates", data);
+  return res.data;
+};
+
+export const createWorkflowStep = async (templateId, data) => {
+  const res = await api.post(`/workflows/templates/${templateId}/steps`, data);
+
+  return res.data;
+};
+
+export const getWorkflowTemplates = async () => {
+  const res = await api.get("/workflows/templates");
+
+  return res.data;
+};
+
+export const getClientWorkflowsByClient = async (clientId) => {
+  const res = await api.get(`/workflows/client/${clientId}`);
+  return res.data;
+};
+
+export const assignWorkflowToClient = async (
+  clientId,
+  templateId,
+  managerId,
+  employeeId,
+) => {
+  const res = await api.post(
+    `/workflows/clients/${clientId}/assign/${templateId}`,
+    {
+      manager_id: managerId,
+      employee_id: employeeId,
+    },
+  );
+
+  return res.data;
+};
+
+export const deleteWorkflow = async (workflowId) => {
+  const res = await api.delete(`/workflows/${workflowId}`);
+  return res.data;
+};
+
+export const assignTask = async (taskId, userId) => {
+  const res = await api.patch(`/workflows/tasks/${taskId}/assign`, {
+    user_id: Number(userId),
+  });
+
+  return res.data;
+};
+
+export const completeWorkflowTask = async (taskId) => {
+  const res = await api.patch(`/workflows/tasks/${taskId}/complete`);
+
+  return res.data;
+};
+
+export const transferTask = (taskId, employeeId) =>
+  api.patch(`/workflows/tasks/${taskId}/transfer`, {
+    employee_id: employeeId,
+  });
+
+export const transferComplete = (taskId) =>
+  api.patch(`/workflows/tasks/${taskId}/transfer-complete`);
+
+export const approveTransfer = (taskId) =>
+  api.patch(`/workflows/tasks/${taskId}/approve-transfer`);

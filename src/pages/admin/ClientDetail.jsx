@@ -23,6 +23,10 @@ import {
   fetchServiceDetails,
   deleteTask,
   getEmployees,
+  getClientGstSummary,
+  getClientWorkflowsByClient,
+  getWorkflowTemplates,
+  assignWorkflowToClient,
 } from "../../api";
 
 export default function ClientDetail() {
@@ -32,6 +36,7 @@ export default function ClientDetail() {
   const qc = useQueryClient();
 
   const [activeTab, setActiveTab] = useState("overview");
+  const [showWorkflowModal, setShowWorkflowModal] = useState(false);
   const [uploadingFile, setUploadingFile] = useState(false);
   const [uploadError, setUploadError] = useState("");
   const [showEditModal, setShowEditModal] = useState(false);
@@ -44,7 +49,7 @@ export default function ClientDetail() {
   const [gstSessionId, setGstSessionId] = useState(null);
   const [gstFetching, setGstFetching] = useState(false);
   const [gstFetchError, setGstFetchError] = useState("");
-
+  const [gstSummary, setGstSummary] = useState({});
   const [activeScraperPlaceholder, setActiveScraperPlaceholder] =
     useState(null);
 
@@ -255,6 +260,26 @@ export default function ClientDetail() {
   } = useQuery({
     queryKey: ["client", id],
     queryFn: () => getClient(id),
+  });
+  useEffect(() => {
+    if (!client?.id) return;
+
+    getClientGstSummary(client.id)
+      .then((data) => {
+        console.log("GST SUMMARY:", data);
+        setGstSummary(data);
+      })
+      .catch((err) => {
+        console.error("GST SUMMARY ERROR:", err);
+      });
+  }, [client?.id]);
+  const { data: workflows = [] } = useQuery({
+    queryKey: ["client-workflows", id],
+    queryFn: () => getClientWorkflowsByClient(id),
+  });
+  const { data: templates = [] } = useQuery({
+    queryKey: ["workflow-templates"],
+    queryFn: getWorkflowTemplates,
   });
   const [feesAmount, setFeesAmount] = useState(client?.fees || "");
   const [feesLoading, setFeesLoading] = useState(false);
@@ -677,12 +702,22 @@ export default function ClientDetail() {
       <div className="flex flex-col sm:flex-row sm:items-center border-b border-gray-200 mb-5 gap-3 sm:gap-4 md:gap-6 pb-1 sm:pb-0">
         <div className="flex gap-1 -mb-px flex-shrink-0">
           {[
-            { key: "overview", label: `Services (${overallProgress}%)` },
+            {
+              key: "overview",
+              label: `Services (${overallProgress}%)`,
+            },
             {
               key: "documents",
               label: `Documents (${client.documents.length})`,
             },
-            { key: "tasks", label: `Tasks (${client.tasks.length})` },
+            {
+              key: "tasks",
+              label: `Tasks (${client.tasks.length})`,
+            },
+            {
+              key: "workflows",
+              label: `Workflows (${workflows.length})`,
+            },
           ].map((tab) => (
             <button
               key={tab.key}
@@ -756,6 +791,13 @@ export default function ClientDetail() {
           client={client}
           isAdmin={isAdmin}
           onRefresh={() => qc.invalidateQueries({ queryKey: ["client", id] })}
+        />
+      )}
+      {activeTab === "workflows" && (
+        <WorkflowsTab
+          workflows={workflows}
+          isAdmin={isAdmin}
+          onAssign={() => setShowWorkflowModal(true)}
         />
       )}
       {showEditModal && (
@@ -905,6 +947,20 @@ export default function ClientDetail() {
             </div>
           </div>
         </div>
+      )}
+      {showWorkflowModal && (
+        <AssignWorkflowModal
+          clientId={id}
+          templates={templates}
+          onClose={() => setShowWorkflowModal(false)}
+          onSuccess={() => {
+            qc.invalidateQueries({
+              queryKey: ["client-workflows", id],
+            });
+
+            setShowWorkflowModal(false);
+          }}
+        />
       )}
     </Layout>
   );
@@ -3051,6 +3107,117 @@ function FilingStatusBox({ returnType, status }) {
         <span>{emoji}</span>
         {label}
       </span>
+    </div>
+  );
+}
+function WorkflowsTab({ workflows, isAdmin, onAssign }) {
+  return (
+    <div className="space-y-4">
+      {isAdmin && (
+        <div className="flex justify-end">
+          <button
+            onClick={onAssign}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg"
+          >
+            + Assign Workflow
+          </button>
+        </div>
+      )}
+
+      {workflows.map((wf) => (
+        <div key={wf.workflow_id} className="bg-white border rounded-xl p-5">
+          <h3 className="font-semibold">{wf.workflow_name}</h3>
+
+          <p className="text-sm text-gray-500">
+            Progress: {wf.progress_percent}%
+          </p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function AssignWorkflowModal({ clientId, templates, onClose, onSuccess }) {
+  const [templateId, setTemplateId] = useState("");
+
+  const [managerId, setManagerId] = useState("");
+
+  const [employeeId, setEmployeeId] = useState("");
+
+  const { data: employees = [] } = useQuery({
+    queryKey: ["employees"],
+    queryFn: getEmployees,
+  });
+
+  const mutation = useMutation({
+    mutationFn: () =>
+      assignWorkflowToClient(clientId, templateId, managerId, employeeId),
+
+    onSuccess,
+  });
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-white p-6 rounded-xl w-[500px]">
+        <h2 className="text-lg font-bold mb-4">Assign Workflow</h2>
+
+        <div className="space-y-3">
+          <select
+            value={templateId}
+            onChange={(e) => setTemplateId(e.target.value)}
+            className="w-full border p-2 rounded"
+          >
+            <option value="">Select Workflow</option>
+
+            {templates.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={managerId}
+            onChange={(e) => setManagerId(e.target.value)}
+            className="w-full border p-2 rounded"
+          >
+            <option value="">Select Manager</option>
+
+            {employees.map((e) => (
+              <option key={e.id} value={e.id}>
+                {e.name}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={employeeId}
+            onChange={(e) => setEmployeeId(e.target.value)}
+            className="w-full border p-2 rounded"
+          >
+            <option value="">Select Employee</option>
+
+            {employees.map((e) => (
+              <option key={e.id} value={e.id}>
+                {e.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex justify-end gap-2 mt-5">
+          <button onClick={onClose} className="px-4 py-2">
+            Cancel
+          </button>
+
+          <button
+            onClick={() => mutation.mutate()}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg"
+          >
+            Assign
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

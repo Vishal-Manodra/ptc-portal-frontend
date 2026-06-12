@@ -39,7 +39,9 @@ export default function GSTLookup() {
     try {
       setLoading(true);
 
-      const result = await verifyGstCaptcha(sessionId, captchaText);
+      console.log("SENDING CLIENT ID:", client.id);
+
+      const result = await verifyGstCaptcha(sessionId, captchaText, client.id);
 
       console.log(result);
 

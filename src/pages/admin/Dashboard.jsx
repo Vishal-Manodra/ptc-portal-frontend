@@ -5,7 +5,7 @@
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { getClients, getTasks } from "../../api";
+import { getClients, getTasks, getMyTasks } from "../../api";
 import Layout from "../../components/layout/Layout";
 import Badge from "../../components/ui/Badge";
 import Spinner from "../../components/ui/Spinner";
@@ -26,8 +26,8 @@ export default function Dashboard() {
   });
 
   const { data: tasks = [], isLoading: tasksLoading } = useQuery({
-    queryKey: ["tasks"],
-    queryFn: () => getTasks(),
+    queryKey: ["my-workflow-tasks"],
+    queryFn: getMyTasks,
   });
 
   // Filter clients based on active tab
@@ -46,7 +46,10 @@ export default function Dashboard() {
     <Layout title="Dashboard">
       {/* Metric cards row */}
       <div className="grid grid-cols-4 gap-4 mb-6">
-        <MetricCard label={isAdmin ? "Total Firm Clients" : "My Assigned Clients"} value={clients.length} />
+        <MetricCard
+          label={isAdmin ? "Total Firm Clients" : "My Assigned Clients"}
+          value={clients.length}
+        />
         <MetricCard label="Active" value={activeCount} color="text-blue-600" />
         <MetricCard
           label={isAdmin ? "Firm Pending Tasks" : "My Pending Tasks"}
@@ -93,10 +96,11 @@ export default function Dashboard() {
                 <button
                   key={tab.key}
                   onClick={() => setActiveTab(tab.key)}
-                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${activeTab === tab.key
+                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                    activeTab === tab.key
                       ? "bg-white text-gray-900 shadow-sm"
                       : "text-gray-500 hover:text-gray-700"
-                    }`}
+                  }`}
                 >
                   {tab.label}
                 </button>
@@ -181,7 +185,7 @@ export default function Dashboard() {
         ) : (
           <div className="divide-y divide-gray-100">
             {tasks.slice(0, 5).map((task) => (
-              <TaskRow key={task.id} task={task} />
+              <TaskRow key={task.task_id} task={task} />
             ))}
           </div>
         )}
@@ -306,10 +310,10 @@ function TaskRow({ task }) {
       />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
-          <p className="text-sm font-medium text-gray-900">{task.title}</p>
+          <p className="text-sm font-medium text-gray-900">{task.step_name}</p>
           {task.client && (
             <span className="text-[10px] bg-blue-50 text-blue-700 border border-blue-100 px-1.5 py-0.5 rounded font-medium">
-              {task.client.business_name}
+              {task.client_name}
             </span>
           )}
         </div>

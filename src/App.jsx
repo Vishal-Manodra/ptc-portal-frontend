@@ -3,9 +3,9 @@
 // It also protects routes — if you're not logged in, you can't access /dashboard.
 // If you're a client, you can't access the admin dashboard.
 
-import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { GoogleOAuthProvider } from "@react-oauth/google";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 
 // Pages
@@ -19,7 +19,8 @@ import MyWork from "./pages/admin/MyWork";
 import GSTFiling from "./pages/admin/GSTFiling";
 import ClientPortal from "./pages/client/ClientPortal";
 import GSTLookup from "./pages/client/GSTLookup";
-
+import Progress from "./pages/admin/Progress";
+import WorkflowTemplates from "./pages/admin/WorkflowTemplates";
 // QueryClient manages all API call caching
 // staleTime: data stays fresh for 5 minutes before refetching
 const queryClient = new QueryClient({
@@ -132,7 +133,15 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
-
+      <Route
+        path="/workflow-templates"
+        element={
+          <ProtectedRoute allowedRoles={["admin"]}>
+            <WorkflowTemplates />
+          </ProtectedRoute>
+        }
+      />
+      <Route path="/progress" element={<Progress />} />
       {/* Client portal — only for clients */}
       <Route
         path="/portal"
@@ -150,13 +159,24 @@ function AppRoutes() {
 }
 
 export default function App() {
+  const app = (
+    <AuthProvider>
+      <BrowserRouter>
+        <AppRoutes />
+      </BrowserRouter>
+    </AuthProvider>
+  );
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <BrowserRouter>
-          <AppRoutes />
-        </BrowserRouter>
-      </AuthProvider>
+      {googleClientId ? (
+        <GoogleOAuthProvider clientId={googleClientId}>
+          {app}
+        </GoogleOAuthProvider>
+      ) : (
+        app
+      )}
     </QueryClientProvider>
   );
 }

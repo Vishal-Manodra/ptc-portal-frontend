@@ -1,7 +1,7 @@
 // src/pages/admin/GSTFiling.jsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { getGstFilings } from "../../api";
+import { getGstFilings, getClientGstSummary, getConversation } from "../../api";
 import Layout from "../../components/layout/Layout";
 import Spinner from "../../components/ui/Spinner";
 import EmptyState from "../../components/ui/EmptyState";
@@ -14,6 +14,17 @@ const currentFYStart =
 const currentFY = `${currentFYStart}-${currentFYStart + 1}`;
 const previousFY = `${currentFYStart - 1}-${currentFYStart}`;
 
+const RETURN_TYPE_LABELS = {
+  gstr3b: "GSTR-3B",
+  gstr1_iff: "GSTR-1 / IFF",
+  gstr4: "GSTR-4",
+  cmp08: "CMP-08",
+  gstr4_annual: "GSTR-4 Annual",
+  gstr9_annual: "GSTR-9 Annual",
+  gstr9c: "GSTR-9C",
+  gstr1a: "GSTR-1A",
+};
+
 export default function GSTFiling() {
   const [filters, setFilters] = useState({
     financial_year: currentFY,
@@ -22,6 +33,32 @@ export default function GSTFiling() {
     status: "",
   });
   const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    getClientGstSummary(8)
+      .then((res) => {
+        console.log("GST SUMMARY:", res);
+      })
+      .catch((err) => {
+        console.error(
+          "GST SUMMARY ERROR:",
+          err.response?.status,
+          err.response?.data,
+        );
+      });
+
+    getConversation(8)
+      .then((res) => {
+        console.log("CONVERSATION:", res);
+      })
+      .catch((err) => {
+        console.error(
+          "CONVERSATION ERROR:",
+          err.response?.status,
+          err.response?.data,
+        );
+      });
+  }, []);
 
   const { data: filings = [], isLoading } = useQuery({
     queryKey: [
@@ -150,9 +187,9 @@ export default function GSTFiling() {
                   <th className="px-4 py-3">Business Name</th>
                   <th className="px-4 py-3">GSTIN</th>
                   <th className="px-4 py-3">Return Type</th>
-                  <th className="px-4 py-3">Financial Year</th>
+                  <th className="px-4 py-3">FY</th>
                   <th className="px-4 py-3">Month</th>
-                  <th className="px-4 py-3">Filing Status</th>
+                  <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3">Filing Date</th>
                   <th className="px-4 py-3">Last Check</th>
                 </tr>
@@ -163,12 +200,31 @@ export default function GSTFiling() {
                     key={f.id || index}
                     className="hover:bg-gray-50/50 transition-colors"
                   >
-                    <td className="px-4 py-3">{f.business_name}</td>
+                    <td className="px-4 py-3">
+                      <a
+                        href={`/clients/${f.client_id}`}
+                        className="text-blue-600 hover:text-blue-800 font-medium"
+                      >
+                        {f.business_name}
+                      </a>
+                    </td>
                     <td className="px-4 py-3">{f.gstin}</td>
-                    <td className="px-4 py-3">{f.return_type}</td>
+                    <td className="px-4 py-3">
+                      {RETURN_TYPE_LABELS[f.return_type] || f.return_type}
+                    </td>
                     <td className="px-4 py-3">{f.financial_year}</td>
                     <td className="px-4 py-3">{f.month}</td>
-                    <td className="px-4 py-3">{f.filing_status}</td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          f.filing_status === "Filed"
+                            ? "bg-green-100 text-green-700"
+                            : "bg-yellow-100 text-yellow-700"
+                        }`}
+                      >
+                        {f.filing_status}
+                      </span>
+                    </td>
                     <td className="px-4 py-3">{f.filing_date || "-"}</td>
                     <td className="px-4 py-3">{f.last_check || "-"}</td>
                   </tr>

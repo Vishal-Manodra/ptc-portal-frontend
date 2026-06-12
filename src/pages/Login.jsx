@@ -3,19 +3,25 @@
 // Handles email + password submission, calls the backend,
 // and redirects to the right page based on role.
 
-import React, { useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { GoogleLogin } from "@react-oauth/google";
 import { useAuth } from "../context/AuthContext";
 
 export default function Login() {
-  const { login } = useAuth();
+  const { login, googleLogin } = useAuth();
   const navigate = useNavigate();
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
   // Form state
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const redirectAfterLogin = (data) => {
+    navigate(data.role === "client" ? "/portal" : "/dashboard");
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault(); // prevent page reload on form submit
@@ -24,15 +30,30 @@ export default function Login() {
 
     try {
       const data = await login(email, password);
-      // Redirect based on role
-      if (data.role === "client") {
-        navigate("/portal");
-      } else {
-        navigate("/dashboard");
-      }
+      redirectAfterLogin(data);
     } catch (err) {
       // Show the error message from the backend
       setError(err.response?.data?.detail || "Login failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSuccess = async (credentialResponse) => {
+    if (!credentialResponse.credential) {
+      setError("Google did not return a valid credential.");
+      return;
+    }
+
+    setError("");
+    setLoading(true);
+    try {
+      const data = await googleLogin(credentialResponse.credential);
+      redirectAfterLogin(data);
+    } catch (err) {
+      setError(
+        err.response?.data?.detail || "Google sign-in failed. Please try again.",
+      );
     } finally {
       setLoading(false);
     }
@@ -69,6 +90,27 @@ export default function Login() {
           <h2 className="text-lg font-medium text-gray-900 mb-6">
             Sign in to your account
           </h2>
+
+          {googleClientId && (
+            <>
+              <div className="flex justify-center">
+                <GoogleLogin
+                  onSuccess={handleGoogleSuccess}
+                  onError={() => setError("Google sign-in was unsuccessful.")}
+                  useOneTap={false}
+                  width="320"
+                />
+              </div>
+
+              <div className="flex items-center gap-3 my-5">
+                <div className="h-px flex-1 bg-gray-200" />
+                <span className="text-xs uppercase tracking-wide text-gray-400">
+                  or
+                </span>
+                <div className="h-px flex-1 bg-gray-200" />
+              </div>
+            </>
+          )}
 
           {/* Error message */}
           {error && (

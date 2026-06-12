@@ -1,7 +1,14 @@
 // src/pages/admin/MyWork.jsx
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { getClients, getTasks, updateTask } from "../../api";
+import {
+  getClients,
+  getMyTasks,
+  completeWorkflowTask,
+  transferTask,
+  getEmployees,
+  approveTransfer,
+} from "../../api";
 import Layout from "../../components/layout/Layout";
 import Badge from "../../components/ui/Badge";
 import Spinner from "../../components/ui/Spinner";
@@ -20,20 +27,71 @@ export default function MyWork() {
 
   // Load tasks list (backend already filters this)
   const { data: tasks = [], isLoading: tasksLoading } = useQuery({
-    queryKey: ["tasks"],
-    queryFn: () => getTasks(),
+    queryKey: ["my-workflow-tasks"],
+    queryFn: getMyTasks,
+  });
+
+  const { data: employees = [] } = useQuery({
+    queryKey: ["employees"],
+    queryFn: getEmployees,
   });
 
   // Toggle task status mutation
-  const toggleTask = useMutation({
-    mutationFn: ({ id, status }) => updateTask(id, { status }),
+  const completeTaskMutation = useMutation({
+    mutationFn: completeWorkflowTask,
+
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["tasks"] });
+      qc.invalidateQueries({
+        queryKey: ["my-workflow-tasks"],
+      });
+
+      qc.invalidateQueries({
+        queryKey: ["client-workflows"],
+      });
+
+      qc.invalidateQueries({
+        queryKey: ["workflow-dashboard"],
+      });
+    },
+  });
+  const transferTaskMutation = useMutation({
+    mutationFn: ({ taskId, employeeId }) => transferTask(taskId, employeeId),
+
+    onSuccess: () => {
+      qc.invalidateQueries({
+        queryKey: ["my-workflow-tasks"],
+      });
+
+      qc.invalidateQueries({
+        queryKey: ["client-workflows"],
+      });
+    },
+  });
+
+  const approveTransferMutation = useMutation({
+    mutationFn: approveTransfer,
+
+    onSuccess: () => {
+      qc.invalidateQueries({
+        queryKey: ["my-workflow-tasks"],
+      });
+
+      qc.invalidateQueries({
+        queryKey: ["client-workflows"],
+      });
+
+      qc.invalidateQueries({
+        queryKey: ["workflow-dashboard"],
+      });
     },
   });
 
   const isLoading = clientsLoading || tasksLoading;
+  const totalTasks = tasks.length;
 
+  const completedTasks = tasks.filter(
+    (task) => task.status === "completed" || task.status === "approved",
+  ).length;
   // Calculate overall metrics
   let totalServices = 0;
   let completedServices = 0;
@@ -48,8 +106,8 @@ export default function MyWork() {
   });
 
   const overallProgress =
-    totalServices > 0 ? Math.round((completedServices / totalServices) * 100) : 0;
-
+    totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+    
   return (
     <Layout title="My Work">
       <div className="space-y-6">
@@ -80,7 +138,9 @@ export default function MyWork() {
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h3 className="font-semibold text-gray-900 text-sm">{user?.name}</h3>
+                    <h3 className="font-semibold text-gray-900 text-sm">
+                      {user?.name}
+                    </h3>
                     <Badge status="active" />
                     <span className="text-[10px] text-gray-400 capitalize bg-gray-50 border border-gray-100 px-2 py-0.5 rounded-full font-medium">
                       {user?.role}
@@ -103,7 +163,8 @@ export default function MyWork() {
                   />
                 </div>
                 <p className="text-[10px] text-gray-500 mt-1 text-right">
-                  {completedServices} of {totalServices} assigned services completed across {clients.length} clients
+                  {tasks.length} assigned workflow task
+                  {tasks.length !== 1 ? "s" : ""}
                 </p>
               </div>
             </div>
@@ -120,17 +181,21 @@ export default function MyWork() {
 
                 {clients.length === 0 ? (
                   <div className="bg-gray-50 border border-gray-100 border-dashed rounded-lg p-4 text-center">
-                    <p className="text-[11px] text-gray-400">No clients assigned to you yet.</p>
+                    <p className="text-[11px] text-gray-400">
+                      No clients assigned to you yet.
+                    </p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {clients.map((client) => {
                       const clientDone = client.services.filter(
-                        (s) => s.status === "completed" || s.status === "done"
+                        (s) => s.status === "completed" || s.status === "done",
                       ).length;
                       const clientTotal = client.services.length;
                       const clientProgress =
-                        clientTotal > 0 ? Math.round((clientDone / clientTotal) * 100) : 0;
+                        clientTotal > 0
+                          ? Math.round((clientDone / clientTotal) * 100)
+                          : 0;
 
                       return (
                         <div
@@ -149,15 +214,25 @@ export default function MyWork() {
                             {/* Services dynamic checklist */}
                             <div className="mt-2 space-y-1.5">
                               {client.services.length === 0 ? (
-                                <p className="text-[10px] text-gray-400">No services assigned.</p>
+                                <p className="text-[10px] text-gray-400">
+                                  No services assigned.
+                                </p>
                               ) : (
                                 client.services.map((s) => (
                                   <div
                                     key={s.id}
                                     className="flex items-center justify-between text-[10px] bg-white border border-gray-100 rounded-md px-2 py-0.5"
                                   >
-                                    <span className="text-gray-700 font-medium">{s.service.name}</span>
-                                    <Badge status={s.status === "completed" ? "done" : "pending"} />
+                                    <span className="text-gray-700 font-medium">
+                                      {s.service.name}
+                                    </span>
+                                    <Badge
+                                      status={
+                                        s.status === "completed"
+                                          ? "done"
+                                          : "pending"
+                                      }
+                                    />
                                   </div>
                                 ))
                               )}
@@ -196,47 +271,91 @@ export default function MyWork() {
 
                 {tasks.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-6 text-center">
-                    <p className="text-[11px] text-gray-400">No direct tasks assigned.</p>
+                    <p className="text-[11px] text-gray-400">
+                      No direct tasks assigned.
+                    </p>
                   </div>
                 ) : (
-                  <div className="space-y-1.5 max-h-[400px] overflow-y-auto pr-1">
-                    {tasks.map((task) => {
-                      const isDone = task.status === "done";
-                      return (
-                        <div
-                          key={task.id}
-                          className="flex items-center gap-2 bg-white border border-gray-100 rounded-xl px-3 py-2 shadow-sm hover:border-blue-100 transition-colors"
-                        >
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              const nextStatus = isDone ? "pending" : "done";
-                              toggleTask.mutate({ id: task.id, status: nextStatus });
-                            }}
-                            className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 transition-colors cursor-pointer ${
-                              isDone
-                                ? "bg-green-500 border-green-500 text-white"
-                                : "border-gray-300 hover:border-blue-500"
-                            }`}
-                          >
-                            {isDone && (
-                              <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                              </svg>
-                            )}
-                          </button>
-                          <div className="flex-1 min-w-0">
-                            <p className={`text-xs font-medium ${isDone ? "text-gray-400 line-through" : "text-gray-700"}`}>
-                              {task.title}
-                            </p>
-                            <p className="text-[9px] text-gray-400 mt-0.5">
-                              Client: {task.client?.business_name || "—"}
-                              {task.due_date && ` · Due: ${new Date(task.due_date).toLocaleDateString("en-IN")}`}
-                            </p>
-                          </div>
+                  <div className="space-y-1 max-h-[400px] overflow-y-auto pr-1">
+                    {tasks.map((task) => (
+                      <div
+                        key={task.task_id}
+                        className="bg-white border rounded-xl p-3"
+                      >
+                        <div className="font-semibold">{task.step_name}</div>
+                        <div className="text-xs mt-1">{task.workflow_name}</div>
+                        <div className="text-xs text-gray-500">
+                          {task.client_name}
                         </div>
-                      );
-                    })}
+
+                        <div className="mt-3 flex items-center gap-3">
+                          <button
+                            onClick={() =>
+                              completeTaskMutation.mutate(task.task_id)
+                            }
+                            className={`w-6 h-6 rounded-md border-2 flex items-center justify-center transition-all duration-200
+                            ${
+                              task.status === "completed"
+                                ? "bg-green-500 border-green-500 text-white"
+                                : "bg-white border-gray-300 text-transparent hover:border-green-500"
+                            }
+                          `}
+                          >
+                            ✓
+                          </button>
+
+                          {task.status === "awaiting_approval" &&
+                            task.original_assignee_id === user.id && (
+                              <button
+                                onClick={() =>
+                                  approveTransferMutation.mutate(task.task_id)
+                                }
+                                className="bg-blue-600 text-white px-2 py-1 rounded text-xs"
+                              >
+                                Approve
+                              </button>
+                            )}
+
+                          <select
+                            defaultValue=""
+                            onChange={(e) => {
+                              if (!e.target.value) return;
+
+                              transferTaskMutation.mutate({
+                                taskId: task.task_id,
+                                employeeId: Number(e.target.value),
+                              });
+                            }}
+                            className="border rounded px-2 py-1 text-xs"
+                          >
+                            <option value="">Transfer To</option>
+
+                            {employees
+                              .filter((emp) => {
+                                if (user.role === "admin") return true;
+
+                                if (user.role === "manager") {
+                                  return (
+                                    emp.role === "manager" ||
+                                    emp.role === "employee"
+                                  );
+                                }
+
+                                if (user.role === "employee") {
+                                  return emp.role === "employee";
+                                }
+
+                                return false;
+                              })
+                              .map((emp) => (
+                                <option key={emp.id} value={emp.id}>
+                                  {emp.name} ({emp.role})
+                                </option>
+                              ))}
+                          </select>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
