@@ -10,6 +10,7 @@ import Layout from "../../components/layout/Layout";
 import Badge from "../../components/ui/Badge";
 import Spinner from "../../components/ui/Spinner";
 import { useAuth } from "../../context/AuthContext";
+import DocumentRegister from "../client/DocumentRegister";
 import {
   getClient,
   updateService,
@@ -711,6 +712,10 @@ export default function ClientDetail() {
               label: `Documents (${client.documents.length})`,
             },
             {
+              key: "register",
+              label: "Register In / Out",
+            },
+            {
               key: "tasks",
               label: `Tasks (${client.tasks.length})`,
             },
@@ -785,6 +790,8 @@ export default function ClientDetail() {
           hasCredentials={hasCredentials}
         />
       )}
+
+      {activeTab === "register" && <DocumentRegister clientId={client.id} />}
 
       {activeTab === "tasks" && (
         <TasksTab
